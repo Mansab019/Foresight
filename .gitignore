@@ -1,0 +1,25 @@
+# Python
+venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+
+# Environment variables — NEVER upload this
+.env
+
+# Django
+db.sqlite3
+*.log
+media/
+
+# VS Code
+.vscode/
+
+# Mac system files
+.DS_Store
+
+# ML models
+*.pkl
+*.joblib
