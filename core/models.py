@@ -107,7 +107,7 @@ class Prediction(models.Model):
     predicted_amount = models.DecimalField(max_digits=10, decimal_places=2)
     prediction_month = models.DateField()
     generated_at = models.DateTimeField(auto_now_add=True)
-    model_version = models.CharField(max_length=20, default='v1.0')
+    model_version = models.CharField(max_length=50, default='v1.0')
 
     def __str__(self):
         return f"{self.user.username} | {self.category} | {self.predicted_amount}"
