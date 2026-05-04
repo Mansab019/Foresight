@@ -1,0 +1,91 @@
+{% extends 'core/base.html' %}
+{% block title %}Predictions{% endblock %}
+
+{% block content %}
+
+<div class="page-header">
+  <h4>ML Predictions</h4>
+  <p>Next month spending forecast — {{ next_month }}</p>
+</div>
+
+<div class="row g-3">
+
+  <!-- Prediction Cards -->
+  <div class="col-md-7">
+    <div class="chart-card">
+      <h6><i class="bi bi-graph-up-arrow me-2"></i>Forecast by Category</h6>
+      <canvas id="forecastChart" height="280"></canvas>
+    </div>
+  </div>
+
+  <!-- Prediction Table -->
+  <div class="col-md-5">
+    <div class="table-card">
+      <h6 class="mb-3">
+        <i class="bi bi-table me-2"></i>Prediction Details
+      </h6>
+      <table class="table table-sm" style="font-size:0.875rem">
+        <thead style="color:#64748B">
+          <tr>
+            <th>Category</th>
+            <th class="text-end">Predicted</th>
+            <th class="text-end">Model</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for pred in predictions %}
+          <tr>
+            <td><span class="badge-category">{{ pred.category }}</span></td>
+            <td class="text-end fw-600" style="color:var(--navy)">
+              {{ pred.predicted_amount|floatformat:0 }}
+            </td>
+            <td class="text-end" style="font-size:0.75rem;color:#64748B">
+              {{ pred.model_version }}
+            </td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="3" class="text-center text-muted py-3">
+              No predictions yet —
+              <a href="{% url 'run_pipeline' %}" style="color:var(--gold)">
+                Run ML Pipeline
+              </a>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  const labels = [{% for p in predictions %}'{{ p.category }}'{% if not forloop.last %},{% endif %}{% endfor %}];
+  const values = [{% for p in predictions %}{{ p.predicted_amount|floatformat:0 }}{% if not forloop.last %},{% endif %}{% endfor %}];
+
+  new Chart(document.getElementById('forecastChart'), {
+    type: 'bar',
+    data: {
+      labels: labels,
+      datasets: [{
+        label: 'Predicted Amount',
+        data: values,
+        backgroundColor: labels.map(() => '#1B2A4A'),
+        borderRadius: 8,
+      }]
+    },
+    options: {
+      indexAxis: 'y',
+      responsive: true,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { grid: { color: '#F1F5F9' } },
+        y: { grid: { display: false } }
+      }
+    }
+  });
+</script>
+{% endblock %}
