@@ -74,6 +74,11 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'foresight.wsgi.application'
 
+from django.contrib.messages import constants as messages
+MESSAGE_TAGS = {
+    messages.ERROR: 'danger',
+}
+
 
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases

@@ -10,6 +10,7 @@ from dateutil.relativedelta import relativedelta
 from core.models import Transaction, Budget, Prediction, Alert
 from core.ml.pipeline import run_ml_pipeline
 from core.alerts import generate_alerts
+from core.importer import import_csv
 from django.contrib.auth.models import User
 
 
@@ -135,6 +136,36 @@ def expenses(request):
         'categories':   categories,
         'alert_count':  alert_count,
     })
+
+
+# ── CSV UPLOAD ────────────────────────────────────────
+@login_required
+def upload_csv_view(request):
+    csv_file = request.FILES.get('csv_file')
+
+    if not csv_file:
+        messages.error(request, 'Please choose a CSV file to upload.')
+        return redirect('expenses')
+
+    if not csv_file.name.lower().endswith('.csv'):
+        messages.error(request, 'Only .csv files are supported.')
+        return redirect('expenses')
+
+    summary = import_csv(csv_file, request.user)
+
+    if summary['imported']:
+        messages.success(
+            request,
+            f"Imported {summary['imported']} of {summary['total_rows']} rows "
+            f"({summary['skipped']} skipped)."
+        )
+    else:
+        messages.error(request, 'No rows were imported — check the file format (needs amount, date, category columns).')
+
+    for err in summary['errors'][:5]:
+        messages.warning(request, err)
+
+    return redirect('expenses')
 
 
 # ── PREDICTIONS ───────────────────────────────────────
