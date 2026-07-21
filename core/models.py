@@ -5,6 +5,30 @@ from django.contrib.auth.models import User
 
 
 # ─────────────────────────────────────────
+# TABLE 1: ImportBatch
+# One row per CSV upload — lets us group and
+# predict on a single upload's transactions
+# separately from the user's full history
+# ─────────────────────────────────────────
+class ImportBatch(models.Model):
+
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name='import_batches'
+    )
+    filename = models.CharField(max_length=255)
+    uploaded_at = models.DateTimeField(auto_now_add=True)
+    row_count = models.IntegerField(default=0)
+
+    class Meta:
+        ordering = ['-uploaded_at']
+
+    def __str__(self):
+        return f"{self.filename} ({self.uploaded_at:%Y-%m-%d %H:%M})"
+
+
+# ─────────────────────────────────────────
 # TABLE 2: Transaction
 # Every expense recorded by the user
 # ─────────────────────────────────────────
@@ -31,6 +55,14 @@ class Transaction(models.Model):
         User,
         on_delete=models.CASCADE,
         related_name='transactions'
+    )
+    batch = models.ForeignKey(
+        ImportBatch,
+        on_delete=models.CASCADE,
+        related_name='transactions',
+        null=True,
+        blank=True,
+        help_text='Set only for rows created via CSV upload — null for manual entries and pre-batch imports'
     )
     amount = models.DecimalField(max_digits=10, decimal_places=2)
     category = models.CharField(max_length=50, choices=CATEGORY_CHOICES)
@@ -102,6 +134,14 @@ class Prediction(models.Model):
         User,
         on_delete=models.CASCADE,
         related_name='predictions'
+    )
+    batch = models.ForeignKey(
+        ImportBatch,
+        on_delete=models.CASCADE,
+        related_name='predictions',
+        null=True,
+        blank=True,
+        help_text='Set only for predictions generated from a single CSV upload — null for the main merged forecast'
     )
     category = models.CharField(max_length=50, choices=CATEGORY_CHOICES)
     predicted_amount = models.DecimalField(max_digits=10, decimal_places=2)

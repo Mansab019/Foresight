@@ -1,0 +1,62 @@
+{% extends 'core/base.html' %}
+{% block title %}Uploads{% endblock %}
+
+{% block content %}
+
+<div class="page-header">
+  <h4>Uploads</h4>
+  <p>Every CSV you've uploaded, kept separate from your main history</p>
+</div>
+
+{% if messages %}
+  {% for message in messages %}
+    <div class="alert alert-{{ message.tags|default:'success' }} py-2 mb-3" style="font-size:0.875rem">
+      {{ message }}
+    </div>
+  {% endfor %}
+{% endif %}
+
+<div class="table-card">
+  <table class="table table-sm table-hover" style="font-size:0.875rem">
+    <thead style="color:#64748B">
+      <tr>
+        <th>File</th>
+        <th>Uploaded</th>
+        <th class="text-end">Rows</th>
+        <th class="text-end">Predictions</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for batch in batches %}
+      <tr>
+        <td>{{ batch.filename }}</td>
+        <td style="color:#64748B">{{ batch.uploaded_at|date:"M d, Y H:i" }}</td>
+        <td class="text-end">{{ batch.row_count }}</td>
+        <td class="text-end">
+          {% if batch.predictions.count %}
+            <span class="badge-category badge-success">Generated</span>
+          {% else %}
+            <span class="badge-category">Not run yet</span>
+          {% endif %}
+        </td>
+        <td class="text-end">
+          <a href="{% url 'batch_detail' batch.id %}" class="btn btn-sm"
+             style="background:var(--navy);color:white;border-radius:8px">
+            View
+          </a>
+        </td>
+      </tr>
+      {% empty %}
+        <tr>
+          <td colspan="5" class="text-center text-muted py-4">
+            No uploads yet —
+            <a href="{% url 'expenses' %}" style="color:var(--gold)">upload a CSV</a>
+          </td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+{% endblock %}

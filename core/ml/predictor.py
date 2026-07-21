@@ -6,18 +6,22 @@ from dateutil.relativedelta import relativedelta
 from core.models import Prediction
 
 
-def generate_predictions(user, best_model_name='unknown'):
+def generate_predictions(user, best_model_name='unknown', batch=None):
     """
     Loads the saved best model
     Generates next month predictions per category
     Saves predictions to PostgreSQL predictions table
+    If batch is given, uses that upload's own model and
+    tags the saved predictions with the same batch, keeping
+    them separate from the user's main merged forecast
     """
 
     print(f"\nGenerating predictions for: {user.username}")
 
     # ── STEP 1: Load saved model ──────────────────────
-    model_path = f'ml_models/{user.username}_best_model.pkl'
-    metadata_path = f'ml_models/{user.username}_metadata.pkl'
+    suffix = f'_batch{batch.id}' if batch is not None else ''
+    model_path = f'ml_models/{user.username}{suffix}_best_model.pkl'
+    metadata_path = f'ml_models/{user.username}{suffix}_metadata.pkl'
 
     try:
         model = joblib.load(model_path)
@@ -75,9 +79,10 @@ def generate_predictions(user, best_model_name='unknown'):
         })
 
     # ── STEP 4: Save predictions to PostgreSQL ────────
-    # Delete old predictions for this user and month
+    # Delete old predictions for this user/batch and month
     Prediction.objects.filter(
         user=user,
+        batch=batch,
         prediction_month=next_month
     ).delete()
 
@@ -86,6 +91,7 @@ def generate_predictions(user, best_model_name='unknown'):
     for row in prediction_rows:
         pred = Prediction.objects.create(
             user=user,
+            batch=batch,
             category=row['category'],
             predicted_amount=row['predicted_amount'],
             prediction_month=next_month,

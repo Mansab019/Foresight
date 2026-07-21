@@ -7,11 +7,12 @@ from django.contrib import messages
 from django.db.models import Sum
 from datetime import date
 from dateutil.relativedelta import relativedelta
-from core.models import Transaction, Budget, Prediction, Alert
+from core.models import Transaction, Budget, Prediction, Alert, ImportBatch
 from core.ml.pipeline import run_ml_pipeline
 from core.alerts import generate_alerts
 from core.importer import import_csv
 from django.contrib.auth.models import User
+from django.shortcuts import get_object_or_404
 
 
 # ── LOGIN ─────────────────────────────────────────────
@@ -81,9 +82,11 @@ def dashboard(request):
         user=user, is_read=False
     ).order_by('-created_at')[:5]
 
-    # Predictions for next month
+    # Predictions for next month — main merged forecast only,
+    # batch-only predictions live on their own upload's page
     predictions = Prediction.objects.filter(
         user=user,
+        batch__isnull=True,
         prediction_month=next_month
     )
 
@@ -151,21 +154,85 @@ def upload_csv_view(request):
         messages.error(request, 'Only .csv files are supported.')
         return redirect('expenses')
 
-    summary = import_csv(csv_file, request.user)
+    # Each upload gets its own batch so its data and predictions
+    # can be viewed separately from the user's full history
+    batch = ImportBatch.objects.create(user=request.user, filename=csv_file.name)
+    summary = import_csv(csv_file, request.user, batch=batch)
+
+    batch.row_count = summary['imported']
+    batch.save()
 
     if summary['imported']:
         messages.success(
             request,
             f"Imported {summary['imported']} of {summary['total_rows']} rows "
-            f"({summary['skipped']} skipped)."
+            f"({summary['skipped']} skipped). This upload is kept separate — "
+            f"view it below."
         )
     else:
         messages.error(request, 'No rows were imported — check the file format (needs amount, date, category columns).')
+        batch.delete()
+        return redirect('expenses')
 
     for err in summary['errors'][:5]:
         messages.warning(request, err)
 
-    return redirect('expenses')
+    return redirect('batch_detail', batch_id=batch.id)
+
+
+# ── UPLOADS LIST ──────────────────────────────────────
+@login_required
+def uploads_list_view(request):
+    batches = ImportBatch.objects.filter(user=request.user)
+
+    alert_count = Alert.objects.filter(
+        user=request.user, is_read=False
+    ).count()
+
+    return render(request, 'core/uploads.html', {
+        'batches': batches,
+        'alert_count': alert_count,
+    })
+
+
+# ── BATCH DETAIL + SEPARATE PREDICTION ────────────────
+@login_required
+def batch_detail_view(request, batch_id):
+    batch = get_object_or_404(ImportBatch, id=batch_id, user=request.user)
+
+    transactions = batch.transactions.all().order_by('-date')
+    predictions = batch.predictions.all().order_by('-predicted_amount')
+
+    alert_count = Alert.objects.filter(
+        user=request.user, is_read=False
+    ).count()
+
+    return render(request, 'core/batch_detail.html', {
+        'batch': batch,
+        'transactions': transactions,
+        'predictions': predictions,
+        'alert_count': alert_count,
+    })
+
+
+@login_required
+def run_batch_pipeline_view(request, batch_id):
+    batch = get_object_or_404(ImportBatch, id=batch_id, user=request.user)
+
+    result = run_ml_pipeline(request.user, batch=batch)
+
+    if result is None:
+        messages.error(
+            request,
+            'Not enough data in this upload to train a model — try a file with more months of history.'
+        )
+    else:
+        messages.success(
+            request,
+            f'Prediction complete for this upload! Best model: {result["best_model"]}.'
+        )
+
+    return redirect('batch_detail', batch_id=batch.id)
 
 
 # ── PREDICTIONS ───────────────────────────────────────
@@ -177,6 +244,7 @@ def predictions_view(request):
 
     predictions = Prediction.objects.filter(
         user=user,
+        batch__isnull=True,
         prediction_month=next_month
     ).order_by('-predicted_amount')
 

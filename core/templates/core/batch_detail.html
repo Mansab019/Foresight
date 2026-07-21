@@ -1,0 +1,99 @@
+{% extends 'core/base.html' %}
+{% block title %}{{ batch.filename }}{% endblock %}
+
+{% block content %}
+
+<div class="page-header d-flex justify-content-between align-items-start">
+  <div>
+    <h4>{{ batch.filename }}</h4>
+    <p>Uploaded {{ batch.uploaded_at|date:"M d, Y H:i" }} — {{ batch.row_count }} rows, isolated from your main history</p>
+  </div>
+  <form method="POST" action="{% url 'run_batch_pipeline' batch.id %}">
+    {% csrf_token %}
+    <button type="submit" class="btn btn-sm"
+            style="background:var(--gold);color:white;border-radius:8px">
+      <i class="bi bi-cpu me-1"></i> Run Prediction for This Upload
+    </button>
+  </form>
+</div>
+
+{% if messages %}
+  {% for message in messages %}
+    <div class="alert alert-{{ message.tags|default:'success' }} py-2 mb-3" style="font-size:0.875rem">
+      {{ message }}
+    </div>
+  {% endfor %}
+{% endif %}
+
+<div class="row g-3">
+
+  <!-- Predictions for this batch only -->
+  <div class="col-md-5">
+    <div class="table-card">
+      <h6 class="mb-3"><i class="bi bi-graph-up-arrow me-2"></i>Predictions — This Upload Only</h6>
+      <table class="table table-sm" style="font-size:0.875rem">
+        <thead style="color:#64748B">
+          <tr>
+            <th>Category</th>
+            <th class="text-end">Predicted</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for pred in predictions %}
+          <tr>
+            <td><span class="badge-category">{{ pred.category }}</span></td>
+            <td class="text-end fw-600" style="color:var(--navy)">
+              {{ pred.predicted_amount|floatformat:0 }}
+            </td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="2" class="text-center text-muted py-3">
+              No predictions yet — click "Run Prediction for This Upload"
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      <p style="font-size:0.75rem;color:#64748B" class="mt-2 mb-0">
+        Trained only on this file's {{ batch.row_count }} rows — with a single
+        month of data, this forecast is a naive estimate, not a trend-based one.
+      </p>
+    </div>
+  </div>
+
+  <!-- Transactions in this batch -->
+  <div class="col-md-7">
+    <div class="table-card">
+      <h6 class="mb-3"><i class="bi bi-list-ul me-2"></i>Transactions in This Upload</h6>
+      <table class="table table-sm table-hover" style="font-size:0.875rem">
+        <thead style="color:#64748B">
+          <tr>
+            <th>Date</th>
+            <th>Category</th>
+            <th>Description</th>
+            <th class="text-end">Amount</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for tx in transactions %}
+          <tr>
+            <td>{{ tx.date|date:"M d, Y" }}</td>
+            <td><span class="badge-category">{{ tx.category }}</span></td>
+            <td style="color:#64748B">{{ tx.description|truncatechars:30|default:"—" }}</td>
+            <td class="text-end fw-600" style="color:var(--navy)">
+              {{ tx.amount|floatformat:0 }}
+            </td>
+          </tr>
+          {% empty %}
+            <tr>
+              <td colspan="4" class="text-center text-muted py-4">No transactions</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+{% endblock %}

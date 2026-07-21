@@ -199,6 +199,9 @@
     <a href="{% url 'expenses' %}" class="nav-link {% if request.resolver_match.url_name == 'expenses' %}active{% endif %}">
       <i class="bi bi-receipt"></i> Expenses
     </a>
+    <a href="{% url 'uploads' %}" class="nav-link {% if request.resolver_match.url_name == 'uploads' or request.resolver_match.url_name == 'batch_detail' %}active{% endif %}">
+      <i class="bi bi-file-earmark-arrow-up"></i> Uploads
+    </a>
     <a href="{% url 'predictions' %}" class="nav-link {% if request.resolver_match.url_name == 'predictions' %}active{% endif %}">
       <i class="bi bi-graph-up-arrow"></i> Predictions
     </a>

@@ -1,11 +1,18 @@
 from django.contrib import admin
 
 # Register your models here.
-from .models import Transaction, Budget, Prediction, Alert
+from .models import Transaction, Budget, Prediction, Alert, ImportBatch
+
+@admin.register(ImportBatch)
+class ImportBatchAdmin(admin.ModelAdmin):
+    list_display = ['user', 'filename', 'row_count', 'uploaded_at']
+    list_filter = ['uploaded_at']
+    search_fields = ['user__username', 'filename']
+
 
 @admin.register(Transaction)
 class TransactionAdmin(admin.ModelAdmin):
-    list_display = ['user', 'amount', 'category', 'date', 'source', 'created_at']
+    list_display = ['user', 'amount', 'category', 'date', 'source', 'batch', 'created_at']
     list_filter = ['category', 'source', 'date']
     search_fields = ['user__username', 'description']
     ordering = ['-date']

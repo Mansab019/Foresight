@@ -7,17 +7,18 @@ from core.ml.registry import MODEL_REGISTRY
 from core.ml.evaluator import evaluate_model, compare_models
 
 
-def train_all_models(user):
+def train_all_models(user, batch=None):
     """
     Loads data, engineers features, trains all 4 models,
     evaluates each one, returns the best model and results
+    If batch is given, trains only on that upload's rows
     """
 
     print(f"\nStarting training for user: {user.username}")
 
     # ── STEP 1: Load data from PostgreSQL ────────────
     print("Loading transactions from database...")
-    df = load_transactions(user)
+    df = load_transactions(user, batch=batch)
 
     if df.empty:
         print("No transactions found. Cannot train.")
@@ -72,13 +73,17 @@ def train_all_models(user):
     best_model = trained_models[best_model_name]
 
     # ── STEP 6: Save best model to disk ──────────────
+    # Batch-scoped runs get their own file so they never
+    # overwrite the user's main merged-history model
+    suffix = f'_batch{batch.id}' if batch is not None else ''
+
     os.makedirs('ml_models', exist_ok=True)
-    model_path = f'ml_models/{user.username}_best_model.pkl'
+    model_path = f'ml_models/{user.username}{suffix}_best_model.pkl'
     joblib.dump(best_model, model_path)
     print(f"Best model saved: {model_path}")
 
     # Also save metadata for predictions
-    metadata_path = f'ml_models/{user.username}_metadata.pkl'
+    metadata_path = f'ml_models/{user.username}{suffix}_metadata.pkl'
     joblib.dump({'monthly': monthly, 'metadata': metadata}, metadata_path)
 
     return best_model, best_model_name, results

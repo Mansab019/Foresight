@@ -58,9 +58,11 @@ def clean_dataframe(df):
 # Handles our sample transactions.csv
 # Long format: one row = one transaction
 # ─────────────────────────────────────────
-def import_csv(file_path, user):
+def import_csv(file_path, user, batch=None):
     """
     Main function — reads CSV, cleans it, saves to PostgreSQL
+    If batch is given, every saved row is tagged with it so
+    this upload's data (and predictions) can be viewed on its own
     Returns a summary dict with results
     """
 
@@ -84,6 +86,7 @@ def import_csv(file_path, user):
             try:
                 Transaction.objects.create(
                     user=user,
+                    batch=batch,
                     amount=row['amount'],
                     category=row['category'],
                     description=row['description'],

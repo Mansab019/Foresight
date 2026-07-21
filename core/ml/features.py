@@ -4,14 +4,17 @@ from django.contrib.auth.models import User
 from core.models import Transaction
 
 
-def load_transactions(user):
+def load_transactions(user, batch=None):
     """
-    Load all transactions for a user from PostgreSQL
+    Load transactions for a user from PostgreSQL
+    If batch is given, only that upload's rows are used —
+    otherwise the user's full history is used
     Returns a clean Pandas DataFrame
     """
-    qs = Transaction.objects.filter(user=user).values(
-        'date', 'amount', 'category'
-    )
+    qs = Transaction.objects.filter(user=user)
+    if batch is not None:
+        qs = qs.filter(batch=batch)
+    qs = qs.values('date', 'amount', 'category')
 
     if not qs.exists():
         return pd.DataFrame()
